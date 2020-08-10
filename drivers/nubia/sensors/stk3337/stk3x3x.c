@@ -2351,11 +2351,11 @@ struct device_attribute stk_als_attrs[] = {
 	__ATTR(transmittance,0664,stk_als_transmittance_show,stk_als_transmittance_store),
 	__ATTR(ircode,0444,stk_als_ir_code_show,NULL),
 	__ATTR(chip_name, 0440, stk_als_chip_id_show, NULL),
-	__ATTR(flush,0440,stk_als_flush_show, NULL),
+	__ATTR(flush,0444,stk_als_flush_show, NULL),
 #ifdef STK_ALSPS_CALIBRATION
 	__ATTR(fac_calibrate, 0664, stk_als_fac_calibrate_show, stk_als_fac_calibrate_store),
-	__ATTR(calibrate, 0664,stk_als_calibrate_show, stk_als_calibrate_store),
-	__ATTR(light_value, 0444, stk_als_factory_lux_show, NULL),
+	__ATTR(calibrate, 0644,stk_als_calibrate_show, stk_als_calibrate_store),
+	__ATTR(light_value, 0644, stk_als_factory_lux_show, NULL),
 	__ATTR(debug, 0664, stk_code_debug_level_show, stk_code_debug_level_store),
 #endif
 #ifdef STK_ALS_FIR
