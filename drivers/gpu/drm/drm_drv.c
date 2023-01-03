@@ -47,7 +47,11 @@
  * drm_debug: Enable debug output.
  * Bitmask of DRM_UT_x. See include/drm/drmP.h for details.
  */
+#ifdef CONFIG_NUBIA_DISP_PREFERENCE
+unsigned int drm_debug = 0x200;
+#else
 unsigned int drm_debug = 0;
+#endif
 EXPORT_SYMBOL(drm_debug);
 
 MODULE_AUTHOR("Gareth Hughes, Leif Delgass, José Fonseca, Jon Smirl");

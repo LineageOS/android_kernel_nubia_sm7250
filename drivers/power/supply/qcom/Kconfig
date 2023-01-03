@@ -162,6 +162,17 @@ config HL6111R
 	  sizes. The HL6111R has voltage, current and temperature
 	  protection mechanisms, an I2C interface, and a PSNS output.
 
+config NUBIA_CHARGE_FEATURE
+	bool "nubia charge feature support"
+	depends on SPMI
+	help
+	  Say Y here to enable nubia charge feature support.
+
+config NUBIA_POWEROFFCHARGE_NODE
+	bool "nubia poweroffcharge node support"
+	depends on SPMI
+	help
+	  Say Y here to enable nubia poweroffcharge node support.
 config SMB1398_CHARGER
 	tristate "SMB1398 power supply framework based driver"
 	depends on MFD_I2C_PMIC

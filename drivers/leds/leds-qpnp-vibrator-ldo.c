@@ -14,6 +14,34 @@
 #include <linux/regmap.h>
 #include <linux/workqueue.h>
 
+#define DEBUG_HAPTIC
+#ifdef CONFIG_NUBIA_HAPTIC_VIBRATOR
+#ifdef DEBUG_HAPTIC
+#define hap_info(fmt, args...)  pr_info(fmt, ##args)
+#define hap_err(fmt, args...)  pr_err(  fmt, ##args)
+#define hap_wan(fmt, args...)  pr_warn( fmt, ##args)
+#define hap_bug_if(en, fmt, args...) \
+do { \
+    if (en) { \
+        printk(KERN_ERR "[haptics] [%s :%d] " fmt,\
+					  __FUNCTION__, __LINE__, ##args); \
+    }; \
+} while (0)
+#else
+#define hap_info(fmt, args...)
+#define hap_err(fmt, args...)
+#define hap_wan(fmt, args...)
+#define hap_bug_if(en, fmt, args...)
+#endif
+#else
+#define hap_info(fmt, args...)
+#define hap_err(fmt, args...)
+#define hap_wan(fmt, args...)
+#define hap_bug_if(en, fmt, args...)
+
+#endif
+
+
 /* Vibrator-LDO register definitions */
 #define QPNP_VIB_LDO_REG_STATUS1	0x08
 #define QPNP_VIB_LDO_VREG_READY		BIT(7)
@@ -52,8 +80,12 @@ struct vib_ldo_chip {
 	int			ldo_uV;
 	int			state;
 	u64			vib_play_ms;
-	bool			vib_enabled;
-	bool			disable_overdrive;
+	bool		vib_enabled;
+	bool		disable_overdrive;
+#ifdef CONFIG_NUBIA_HAPTIC_VIBRATOR	
+    u32          ztemt_vibrator_ms;	
+    u8            debug_level;	
+#endif
 };
 
 static inline int qpnp_vib_ldo_poll_status(struct vib_ldo_chip *chip)
@@ -253,6 +285,33 @@ static ssize_t qpnp_vib_store_state(struct device *dev,
 	return count;
 }
 
+#ifdef CONFIG_NUBIA_HAPTIC_VIBRATOR
+static ssize_t qpnp_haptics_show_debug(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct led_classdev *cdev = dev_get_drvdata(dev);
+	struct vib_ldo_chip *chip = container_of(cdev, struct vib_ldo_chip,
+						cdev);
+
+	return snprintf(buf, PAGE_SIZE, "%d\n", chip->debug_level);
+}
+
+static ssize_t qpnp_haptics_store_debug(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct led_classdev *cdev = dev_get_drvdata(dev);
+	struct vib_ldo_chip *chip = container_of(cdev, struct vib_ldo_chip,
+						cdev);
+	int data,rc;
+
+	rc = kstrtoint(buf, 10, &data);
+	if (rc < 0)
+		return rc;
+ 	chip->debug_level = data;
+ 	return count;
+}
+#endif
+
 static ssize_t qpnp_vib_show_duration(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
@@ -278,6 +337,10 @@ static ssize_t qpnp_vib_store_duration(struct device *dev,
 						cdev);
 	u32 val;
 	int ret;
+#ifdef CONFIG_NUBIA_HAPTIC_VIBRATOR
+		ktime_t time_rem;
+		s64 time_us = 0;
+#endif
 
 	ret = kstrtouint(buf, 0, &val);
 	if (ret < 0)
@@ -286,6 +349,22 @@ static ssize_t qpnp_vib_store_duration(struct device *dev,
 	/* setting 0 on duration is NOP for now */
 	if (val <= 0)
 		return count;
+#ifdef CONFIG_NUBIA_HAPTIC_VIBRATOR
+		if(0 != val)
+		{
+			if(val == 640){		//adjust for charger vibrator play too long
+				val = 30;
+				hap_info("adjust vibrator play from 640ms to 30ms for charger informing.\n");
+			}
+			val = val +chip->ztemt_vibrator_ms;
+
+			if (hrtimer_active(&chip->stop_timer)) {
+				time_rem = hrtimer_get_remaining(&chip->stop_timer);
+				time_us = ktime_to_us(time_rem);
+			}
+			hap_info("time_remaining time_us:%lld ms\n", time_us / 1000);
+		}
+#endif
 
 	if (val < QPNP_VIB_MIN_PLAY_MS)
 		val = QPNP_VIB_MIN_PLAY_MS;
@@ -296,6 +375,11 @@ static ssize_t qpnp_vib_store_duration(struct device *dev,
 	mutex_lock(&chip->lock);
 	chip->vib_play_ms = val;
 	mutex_unlock(&chip->lock);
+#ifdef CONFIG_NUBIA_HAPTIC_VIBRATOR
+		hap_info("chip->vib_play_ms:%d ztemt_vibrator_ms:%d \n",chip->vib_play_ms,chip->ztemt_vibrator_ms);
+#else
+		hap_info("chip->vib_play_ms:%d \n",chip->vib_play_ms);
+#endif
 
 	return count;
 }
@@ -372,11 +456,14 @@ static struct device_attribute qpnp_vib_attrs[] = {
 	__ATTR(duration, 0664, qpnp_vib_show_duration, qpnp_vib_store_duration),
 	__ATTR(activate, 0664, qpnp_vib_show_activate, qpnp_vib_store_activate),
 	__ATTR(vmax_mv, 0664, qpnp_vib_show_vmax, qpnp_vib_store_vmax),
+#ifdef CONFIG_NUBIA_HAPTIC_VIBRATOR
+   	 __ATTR(debug, 0664, qpnp_haptics_show_debug, qpnp_haptics_store_debug),
+#endif
 };
 
 static int qpnp_vib_parse_dt(struct device *dev, struct vib_ldo_chip *chip)
 {
-	int ret;
+	int ret,temp;
 
 	ret = of_property_read_u32(dev->of_node, "qcom,vib-ldo-volt-uv",
 				&chip->vmax_uV);
@@ -385,6 +472,17 @@ static int qpnp_vib_parse_dt(struct device *dev, struct vib_ldo_chip *chip)
 			ret);
 		return ret;
 	}
+#ifdef CONFIG_NUBIA_HAPTIC_VIBRATOR
+		chip->ztemt_vibrator_ms = 0;
+		ret= of_property_read_u32(dev->of_node,"qcom,ztemt_vibrator_ms",&temp);
+		if (!ret) {
+			chip->ztemt_vibrator_ms = temp;
+		} else if (ret != -EINVAL) {
+			pr_err( "Unable to read ztemt_vibrator_ms\n");
+			return ret;
+		}
+		hap_info("nubia ztemt_vibrator_ms:%d\n",temp);
+#endif
 
 	chip->disable_overdrive = of_property_read_bool(dev->of_node,
 					"qcom,disable-overdrive");
@@ -446,6 +544,8 @@ static int qpnp_vibrator_ldo_probe(struct platform_device *pdev)
 	struct vib_ldo_chip *chip;
 	int i, ret;
 	u32 base;
+
+	hap_info("qpnp_vibrator_ldo_probe begin\n");
 
 	ret = of_property_read_u32(of_node, "reg", &base);
 	if (ret < 0) {

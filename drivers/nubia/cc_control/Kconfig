@@ -1,0 +1,9 @@
+#
+# Nubia usb cc pin control driver configuration
+#
+
+config NUBIA_USB_CC_CTRL
+        bool "NUBIA_USB_CC_CTRL"
+        default y
+	help
+	  This enables support for USB CC pin control to slow cc pin oxide.

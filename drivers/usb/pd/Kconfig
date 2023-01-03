@@ -28,4 +28,8 @@ config QPNP_USB_PDPHY
 	  The is used to handle the PHY layer communication of the
 	  Power Delivery stack.
 
+config NUBIA_CHARGE_FEATURE
+	bool "nubia charge feature support"
+	help
+	  Say Y here to enable nubia charge feature support.
 endmenu

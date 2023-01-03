@@ -1920,7 +1920,8 @@ static int smb1390_master_probe(struct smb1390 *chip)
 
 	smb1390_dbg(chip, PR_INFO, "Detected revid=0x%02x\n",
 			 chip->pmic_rev_id->rev4);
-	if (chip->pmic_rev_id->rev4 <= 0x02 && chip->pl_output_mode !=
+	//if (chip->pmic_rev_id->rev4 <= 0x02 && chip->pl_output_mode !=
+	if (chip->pmic_rev_id->rev4 < 0x02 && chip->pl_output_mode !=
 			POWER_SUPPLY_PL_OUTPUT_VPH) {
 		pr_err("Incompatible SMB1390 HW detected, Disabling the charge pump\n");
 		if (chip->disable_votable)

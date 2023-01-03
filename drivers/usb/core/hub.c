@@ -35,7 +35,7 @@
 
 #include "hub.h"
 #include "otg_whitelist.h"
-
+#include "../dwc3/nubia_usb_test.h"
 #define USB_VENDOR_GENESYS_LOGIC		0x05e3
 #define USB_VENDOR_SMSC				0x0424
 #define USB_PRODUCT_USB5534B			0x5534
@@ -50,6 +50,9 @@
 #define USB_TP_TRANSMISSION_DELAY	40	/* ns */
 #define USB_TP_TRANSMISSION_DELAY_MAX	65535	/* ns */
 #define USB_PING_RESPONSE_TIME		400	/* ns */
+#ifdef CONFIG_NUBIA_USB30_FEATURE
+struct usb_device *nubia_usb_device = NULL;
+#endif
 
 /* Protect struct usb_device->state and ->children members
  * Note: Both are also protected by ->dev.sem, except that ->state can
@@ -4525,6 +4528,8 @@ static int hub_set_address(struct usb_device *udev, int devnum)
  * device says it supports the new USB 2.0 Link PM errata by setting the BESL
  * support bit in the BOS descriptor.
  */
+#ifdef CONFIG_NUBIA_USB_DISABLE_LINK_PM
+#else
 static void hub_set_initial_usb2_lpm_policy(struct usb_device *udev)
 {
 	struct usb_hub *hub = usb_hub_to_struct_hub(udev->parent);
@@ -4542,6 +4547,7 @@ static void hub_set_initial_usb2_lpm_policy(struct usb_device *udev)
 		usb_enable_usb2_hardware_lpm(udev);
 	}
 }
+#endif
 
 static int hub_enable_device(struct usb_device *udev)
 {
@@ -4580,7 +4586,9 @@ hub_port_init(struct usb_hub *hub, struct usb_device *udev, int port1,
 	const char		*speed;
 	int			devnum = udev->devnum;
 	const char		*driver_name;
-
+#ifdef CONFIG_NUBIA_USB30_FEATURE
+	nubia_usb_device = udev;
+#endif
 	/* root hub ports have a slightly longer reset period
 	 * (from USB 2.0 spec, section 7.1.7.5)
 	 */
@@ -4903,7 +4911,12 @@ hub_port_init(struct usb_hub *hub, struct usb_device *udev, int port1,
 	/* notify HCD that we have a device connected and addressed */
 	if (hcd->driver->update_device)
 		hcd->driver->update_device(hcd, udev);
+
+#ifdef CONFIG_NUBIA_USB_DISABLE_LINK_PM
+#else
 	hub_set_initial_usb2_lpm_policy(udev);
+#endif
+
 fail:
 	if (retval) {
 		hub_port_disable(hub, port1, 0);

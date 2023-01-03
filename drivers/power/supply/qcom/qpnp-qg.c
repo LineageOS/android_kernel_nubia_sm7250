@@ -4822,6 +4822,14 @@ static int qpnp_qg_probe(struct platform_device *pdev)
 			return rc;
 		}
 		schedule_delayed_work(&chip->ttf->ttf_work, 10000);
+#if defined(CONFIG_NUBIA_CHARGE_FEATURE)
+		chip->soc_monitor_work_votable = find_votable("SOC_MONITOR");
+		if (chip->soc_monitor_work_votable == NULL) {
+			pr_err("NEO: can't find SOC_MONITOR votable\n");
+		} else {
+			vote(chip->soc_monitor_work_votable, "FG_PROFILE_VOTER", true, 0);
+		}
+#endif
 	}
 
 	rc = qg_determine_pon_soc(chip);

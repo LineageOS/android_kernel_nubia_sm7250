@@ -21,6 +21,13 @@
 #include <linux/usb/typec.h>
 #include <linux/usb/usbpd.h>
 #include "usbpd.h"
+#ifdef CONFIG_NUBIA_DOCK_FEATURE
+#include "../../power/supply/qcom/smb5-lib.h"
+#define DOCK_PID_NUBIA 0x0103
+bool global_is_dock2_detect = false;
+extern struct smb_charger *nubia_global_charger;
+extern bool nubia_global_is_charge;
+#endif
 
 enum usbpd_state {
 	PE_UNKNOWN,
@@ -353,6 +360,13 @@ static void *usbpd_ipc_log;
 
 #define PD_MIN_SINK_CURRENT	900
 
+#ifdef CONFIG_NUBIA_CHARGE_FEATURE
+#define PD_APDO_MAX_VOLT_MV	10000000 /*10V*/
+#define PD_APDO_SET_VOLT_MV	9500000 /*9.5V*/
+#define PD_APDO_MAX_CURRENT_MA 2450000 /*2.45A*/
+#endif
+
+
 static const u32 default_src_caps[] = { 0x36019096 };	/* VSafe5V @ 1.5A */
 static const u32 default_snk_caps[] = { 0x2601912C };	/* VSafe5V @ 3A */
 
@@ -409,6 +423,11 @@ struct usbpd {
 	bool			peer_dr_swap;
 	bool			no_usb3dp_concurrency;
 	bool			pd20_source_only;
+
+#ifdef CONFIG_NUBIA_CHARGE_FEATURE
+	int pdo_select_old;
+	int pdo_select_new;
+#endif
 
 	u32			sink_caps[7];
 	int			num_sink_caps;
@@ -1569,6 +1588,11 @@ static void handle_vdm_resp_ack(struct usbpd *pd, u32 *vdos, u8 num_vdos,
 static void handle_vdm_rx(struct usbpd *pd, struct rx_msg *rx_msg)
 {
 	int ret;
+#ifdef CONFIG_NUBIA_DOCK_FEATURE
+	int produce_id;
+	int bcd_id;
+	int icl_ua = 1;
+#endif
 	u32 vdm_hdr =
 	rx_msg->data_len >= sizeof(u32) ? ((u32 *)rx_msg->payload)[0] : 0;
 
@@ -1580,7 +1604,29 @@ static void handle_vdm_rx(struct usbpd *pd, struct rx_msg *rx_msg)
 	u8 cmd_type = SVDM_HDR_CMD_TYPE(vdm_hdr);
 	struct usbpd_svid_handler *handler;
 	ktime_t recvd_time = ktime_get();
-
+#ifdef CONFIG_NUBIA_DOCK_FEATURE
+	usbpd_err(&pd->dev,"num_vdos = %d, rx_msg->data_len = %d, svid = %x\n", num_vdos, rx_msg->data_len, svid);
+	if (num_vdos == 4 && svid != 0xFF01){
+		bcd_id = rx_msg->payload[12] + rx_msg->payload[13]*256;
+		produce_id = rx_msg->payload[14] + rx_msg->payload[15]*256;
+		usbpd_err(&pd->dev,"Produce_Id = 0x%04x, Bcd_Id = 0x%04x, nubia_global_is_charge = %d\n", produce_id, bcd_id, nubia_global_is_charge);
+		if (bcd_id == 0x0001 && produce_id == DOCK_PID_NUBIA){
+         		global_is_dock2_detect = true;
+			produce_id = 0;
+			bcd_id = 0;
+			if (!nubia_global_is_charge){
+				ret = smblib_set_charge_param(nubia_global_charger, &nubia_global_charger->param.otg_cl, 0);
+				ret = smblib_get_charge_param(nubia_global_charger, &nubia_global_charger->param.otg_cl, &icl_ua);
+				usbpd_err(&pd->dev, "finished set the otg current limit: icl_ua = %d.\n", icl_ua);
+				if (ret < 0) {
+                			pr_err("Couldn't set otg current limit ret=%d\n", ret);
+					return;
+        			}
+			}
+		}
+	}
+	usbpd_err(&pd->dev,"produce_id = 0x%04x, bcd_id = 0x%04x, nubia_global_is_charge = %d\n", produce_id, bcd_id, nubia_global_is_charge);
+#endif
 	usbpd_dbg(&pd->dev,
 			"VDM rx: svid:%04x cmd:%x cmd_type:%x vdm_hdr:%x has_dp: %s\n",
 			svid, cmd, cmd_type, vdm_hdr,
@@ -3493,6 +3539,14 @@ static void handle_disconnect(struct usbpd *pd)
 
 	pd->in_pr_swap = false;
 	pd->pd_connected = false;
+#ifdef CONFIG_NUBIA_DOCK_FEATURE
+	if (global_is_dock2_detect){
+	global_is_dock2_detect = false;
+		if (!smblib_set_charge_param(nubia_global_charger, &nubia_global_charger->param.otg_cl, 2500000)){
+			usbpd_err(&pd->dev, "disconnect:set otg_cl to 2.5A successful,global_is_dock2_detect = %d\n", global_is_dock2_detect);
+		}
+	}
+#endif
 	pd->in_explicit_contract = false;
 	pd->hard_reset_recvd = false;
 	pd->caps_count = 0;
@@ -3567,6 +3621,9 @@ static void handle_hard_reset(struct usbpd *pd)
 	union power_supply_propval val = {0};
 
 	pd->hard_reset_recvd = false;
+#ifdef CONFIG_NUBIA_DOCK_FEATURE
+	global_is_dock2_detect = false;
+#endif
 
 	if (pd->requested_current) {
 		val.intval = pd->requested_current = 0;
@@ -4292,7 +4349,22 @@ static ssize_t select_pdo_store(struct device *dev,
 		ret = -EINVAL;
 		goto out;
 	}
-
+/*	
+#if defined(CONFIG_NUBIA_CHARGE_FEATURE)	 
+	pd->pdo_select_new = 1;
+	if(uv >= PD_APDO_MAX_VOLT_MV && ua > PD_APDO_MAX_CURRENT_MA){
+		if(pd->pdo_select_old != pd->pdo_select_new){
+			pd->pdo_select_old = pd->pdo_select_new;
+			uv = PD_APDO_SET_VOLT_MV;
+			ua = PD_APDO_MAX_CURRENT_MA;
+		}else{
+			pd->pdo_select_old = 0;
+			uv = PD_APDO_SET_VOLT_MV + 20000;
+			ua = PD_APDO_MAX_CURRENT_MA;
+		}	
+	}
+#endif
+*/
 	if (src_cap_id != pd->src_cap_id) {
 		usbpd_err(&pd->dev, "src_cap_id mismatch.  Requested:%d, current:%d\n",
 				src_cap_id, pd->src_cap_id);
@@ -4849,6 +4921,10 @@ struct usbpd *usbpd_create(struct device *parent)
 	pd->typec_caps.pr_set = usbpd_typec_pr_set;
 	pd->typec_caps.port_type_set = usbpd_typec_port_type_set;
 	pd->partner_desc.identity = &pd->partner_identity;
+#ifdef CONFIG_NUBIA_CHARGE_FEATURE
+	pd->pdo_select_old = 0;
+	pd->pdo_select_new = 0;
+#endif
 
 	ret = get_connector_type(pd);
 	if (ret < 0)

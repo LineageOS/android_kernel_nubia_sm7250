@@ -20,7 +20,9 @@
 #include <linux/jiffies.h>
 
 #include "thermal_core.h"
-
+//Begin [0016004715,fix the lcd backligt register null error 20191101]
+#include <linux/vmalloc.h>
+//End    [0016004715,fix the lcd backligt register null error 20191101]
 /* sys I/F for thermal zone */
 
 static ssize_t
@@ -1063,8 +1065,10 @@ static void cooling_device_stats_setup(struct thermal_cooling_device *cdev)
 	var = sizeof(*stats);
 	var += sizeof(*stats->time_in_state) * states;
 	var += sizeof(*stats->trans_table) * states * states;
-
-	stats = kzalloc(var, GFP_KERNEL);
+     //Begin [0016004715,fix the lcd backligt register null error 20191101]
+	//stats = kzalloc(var, GFP_KERNEL);
+	stats =vzalloc(var);
+	//End [0016004715,fix the lcd backligt register null error 20191101]
 	if (!stats)
 		goto out;
 

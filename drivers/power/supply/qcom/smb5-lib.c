@@ -20,7 +20,16 @@
 #include "step-chg-jeita.h"
 #include "storm-watch.h"
 #include "schgm-flash.h"
-
+#include "../../../usb/pd/usbpd.h"
+#define CONFIG_DRM_MSM 1
+#if defined(CONFIG_NUBIA_CHARGE_FEATURE)
+#include <linux/msm_drm_notify.h>
+#include <linux/notifier.h>
+#include <linux/fb.h>
+#endif
+#ifdef CONFIG_NUBIA_DOCK_FEATURE
+bool nubia_global_is_charge = false;
+#endif
 #define smblib_err(chg, fmt, ...)		\
 	pr_err("%s: %s: " fmt, chg->name,	\
 		__func__, ##__VA_ARGS__)	\
@@ -764,6 +773,17 @@ static int smblib_usb_pd_adapter_allowance_override(struct smb_charger *chg,
 	if (rc < 0)
 		smblib_err(chg, "Couldn't write 0x%02x to USBIN_ADAPTER_ALLOW_OVERRIDE_REG rc=%d\n",
 			allowed_voltage, rc);
+	
+	#if defined(CONFIG_NUBIA_CHARGE_FEATURE)
+	if(chg->real_charger_type != POWER_SUPPLY_TYPE_USB_PD){
+		rc = smblib_write(chg, USBIN_ADAPTER_ALLOW_CFG_REG, USBIN_ADAPTER_ALLOW_5V_TO_12V);
+		if (rc < 0) {
+			smblib_err(chg, "Couldn't write 0x%02x to USBIN_ADAPTER_ALLOW_CFG rc=%d\n",
+				allowed_voltage, rc);
+			return rc;
+		}
+	}
+	#endif
 
 	smblib_dbg(chg, PR_MISC, "set USBIN_ALLOW_OVERRIDE: %d\n",
 			allowed_voltage);
@@ -979,6 +999,34 @@ void smblib_hvdcp_detect_enable(struct smb_charger *chg, bool enable)
 		smblib_err(chg, "failed to write USBIN_OPTIONS_1_CFG rc=%d\n",
 				rc);
 }
+
+#if defined(CONFIG_NUBIA_CHARGE_FEATURE)
+static int smblib_fb_notifier_callback(struct notifier_block *self,
+		unsigned long event, void *data)
+{
+	int *transition;
+	struct fb_event *evdata = data;
+	struct smb_charger *chg = container_of(self, struct smb_charger, fb_notifier);	
+	if ( evdata && evdata->data && chg ) {
+		if (( event == MSM_DRM_EARLY_EVENT_BLANK)||(event == MSM_DRM_AOD_EVENT)) {
+			transition = evdata->data;
+			if((*transition == MSM_DRM_BLANK_POWERDOWN)||
+				(*transition == MSM_DRM_MAJOR_AOD_ON)){			
+				chg->lcd_on = 0;
+			}
+			else if ((*transition == MSM_DRM_BLANK_UNBLANK)||
+				(*transition == MSM_DRM_MAJOR_AOD_OFF)){				
+				chg->lcd_on = 1;
+			}
+			else {
+				smblib_err(chg, "Do nothing.\n");
+			}			
+		}
+	}
+	smblib_err(chg, "LCD is %d\n",chg->lcd_on);
+	return 0;
+}
+#endif
 
 static void smblib_hvdcp_detect_try_enable(struct smb_charger *chg, bool enable)
 {
@@ -2339,9 +2387,10 @@ int smblib_get_batt_current_now(struct smb_charger *chg,
 
 	rc = smblib_get_prop_from_bms(chg,
 			POWER_SUPPLY_PROP_CURRENT_NOW, val);
+	#ifndef CONFIG_NUBIA_CHARGE_FEATURE
 	if (!rc)
 		val->intval *= (-1);
-
+	#endif
 	return rc;
 }
 
@@ -3339,6 +3388,10 @@ int smblib_get_prop_usb_voltage_max_design(struct smb_charger *chg,
 			val->intval = MICRO_9V;
 			break;
 		}
+		#if defined(CONFIG_NUBIA_CHARGE_FEATURE)
+		val->intval = MICRO_9V;
+		break;
+		#endif
 		/* else, fallthrough */
 	case POWER_SUPPLY_TYPE_USB_HVDCP_3P5:
 	case POWER_SUPPLY_TYPE_USB_HVDCP_3:
@@ -3698,6 +3751,16 @@ static int smblib_get_prop_ufp_mode(struct smb_charger *chg)
 		return POWER_SUPPLY_TYPEC_NONE;
 	}
 	smblib_dbg(chg, PR_REGISTER, "TYPE_C_STATUS_1 = 0x%02x\n", stat);
+	
+#if defined(CONFIG_NUBIA_CHARGE_FEATURE)
+	/* config 0x154A to 0x17 */
+	if (stat &
+		(SNK_DAM_500MA_BIT|SNK_DAM_1500MA_BIT|SNK_DAM_3000MA_BIT)){
+		smblib_masked_write(chg, TYPE_C_DEBUG_ACCESS_SINK_REG,
+		TYPEC_DEBUG_ACCESS_SINK_MASK, 
+		0x17);
+	}
+#endif
 
 	switch (stat & DETECTED_SRC_TYPE_MASK) {
 	case SNK_RP_STD_BIT:
@@ -3709,9 +3772,20 @@ static int smblib_get_prop_ufp_mode(struct smb_charger *chg)
 	case SNK_RP_SHORT_BIT:
 		return POWER_SUPPLY_TYPEC_NON_COMPLIANT;
 	case SNK_DAM_500MA_BIT:
+#if defined(CONFIG_NUBIA_CHARGE_FEATURE)
+		return POWER_SUPPLY_TYPEC_SOURCE_DEFAULT;
+#endif
 	case SNK_DAM_1500MA_BIT:
+#if defined(CONFIG_NUBIA_CHARGE_FEATURE)
+		return POWER_SUPPLY_TYPEC_SOURCE_MEDIUM;
+#endif		
 	case SNK_DAM_3000MA_BIT:
+#if defined(CONFIG_NUBIA_CHARGE_FEATURE)
+		return POWER_SUPPLY_TYPEC_SOURCE_HIGH;
+#endif
+#ifndef CONFIG_NUBIA_CHARGE_FEATURE
 		return POWER_SUPPLY_TYPEC_SINK_DEBUG_ACCESSORY;
+#endif
 	default:
 		break;
 	}
@@ -5494,6 +5568,13 @@ void smblib_usb_plugin_hard_reset_locked(struct smb_charger *chg)
 	vbus_rising = (bool)(stat & USBIN_PLUGIN_RT_STS_BIT);
 
 	if (vbus_rising) {
+		#if defined(CONFIG_NUBIA_CHARGE_FEATURE)
+		vote(chg->awake_votable, USER_ADAPTER_CHG, true, 0);
+		chg->step_chg_vote_flag = false;
+		cancel_delayed_work_sync(&chg->step_charge_check_work);
+		schedule_delayed_work(&chg->step_charge_check_work,
+		                      msecs_to_jiffies(5000));
+		#endif
 		/* Remove FCC_STEPPER 1.5A init vote to allow FCC ramp up */
 		if (chg->fcc_stepper_enable)
 			vote(chg->fcc_votable, FCC_STEPPER_VOTER, false, 0);
@@ -5515,11 +5596,24 @@ void smblib_usb_plugin_hard_reset_locked(struct smb_charger *chg)
 		if (chg->fcc_stepper_enable)
 			vote(chg->fcc_votable, FCC_STEPPER_VOTER,
 							true, 1500000);
+		#if defined(CONFIG_NUBIA_CHARGE_FEATURE)
+		cancel_delayed_work_sync(&chg->step_charge_check_work);
+		vote(chg->fcc_votable, USER_STEP_CHG, false, 0);
+		vote(chg->fcc_votable, USER_ADAPTER_CHG, false, 0);
+		vote(chg->usb_icl_votable, USER_ADAPTER_CHG, false, 0);
+		chg->step_chg_vote_flag = false;
+		vote(chg->awake_votable, USER_ADAPTER_CHG, false, 0);
+		#endif
 	}
 
 	power_supply_changed(chg->usb_psy);
+	#if defined(CONFIG_NUBIA_CHARGE_FEATURE)
+	smblib_err(chg, "IRQ: usbin-plugin %s\n",
+					vbus_rising ? "attached" : "detached");
+	#else
 	smblib_dbg(chg, PR_INTERRUPT, "IRQ: usbin-plugin %s\n",
 					vbus_rising ? "attached" : "detached");
+	#endif	
 }
 
 #define PL_DELAY_MS	30000
@@ -5542,6 +5636,13 @@ void smblib_usb_plugin_locked(struct smb_charger *chg)
 						chg->chg_freq.freq_removal);
 
 	if (vbus_rising) {
+		#if defined(CONFIG_NUBIA_CHARGE_FEATURE)
+		vote(chg->awake_votable, USER_ADAPTER_CHG, true, 0);
+		chg->step_chg_vote_flag = false;
+		cancel_delayed_work_sync(&chg->step_charge_check_work);
+		schedule_delayed_work(&chg->step_charge_check_work,
+		                      msecs_to_jiffies(5000));
+		#endif
 		cancel_delayed_work_sync(&chg->pr_swap_detach_work);
 		vote(chg->awake_votable, DETACH_DETECT_VOTER, false, 0);
 		rc = smblib_request_dpdm(chg, true);
@@ -5619,6 +5720,16 @@ void smblib_usb_plugin_locked(struct smb_charger *chg)
 			smblib_err(chg, "Couldn't disable DPDM rc=%d\n", rc);
 
 		smblib_update_usb_type(chg);
+		#if defined(CONFIG_NUBIA_CHARGE_FEATURE)
+		cancel_delayed_work_sync(&chg->step_charge_check_work);
+		vote(chg->fcc_votable, USER_STEP_CHG, false, 0);
+		vote(chg->fcc_votable, USER_ADAPTER_CHG, false, 0);
+		vote(chg->usb_icl_votable, USER_ADAPTER_CHG, false, 0);
+		chg->step_chg_vote_flag = false;
+		if(chg->lcd_on_limit_enable)
+			vote(chg->fcc_votable, USER_LCD_CHG, false, 0);		
+		vote(chg->awake_votable, USER_ADAPTER_CHG, false, 0);
+		#endif
 	}
 
 	if (chg->connector_type == POWER_SUPPLY_CONNECTOR_MICRO_USB)
@@ -5628,8 +5739,21 @@ void smblib_usb_plugin_locked(struct smb_charger *chg)
 						!vbus_rising, 0);
 
 	power_supply_changed(chg->usb_psy);
+#ifdef CONFIG_NUBIA_DOCK_FEATURE
+	if (vbus_rising){
+		nubia_global_is_charge = true;
+	}else{
+		nubia_global_is_charge = false;
+	}
+	smblib_err(chg, "nubia_global_is_charge = %d\n", nubia_global_is_charge);
+#endif
+	#if defined(CONFIG_NUBIA_CHARGE_FEATURE)
+	smblib_err(chg, "IRQ: usbin-plugin %s\n",
+					vbus_rising ? "attached" : "detached");
+	#else
 	smblib_dbg(chg, PR_INTERRUPT, "IRQ: usbin-plugin %s\n",
 					vbus_rising ? "attached" : "detached");
+	#endif
 }
 
 irqreturn_t usb_plugin_irq_handler(int irq, void *data)
@@ -5836,9 +5960,32 @@ static void smblib_handle_apsd_done(struct smb_charger *chg, bool rising)
 	default:
 		break;
 	}
-
+#if defined(CONFIG_NUBIA_CHARGE_FEATURE)
+	if(chg->real_charger_type != POWER_SUPPLY_TYPE_USB_PD) {
+		if(apsd_result->bit & QC_3P0_BIT) {
+			vote(chg->fcc_votable, USER_ADAPTER_CHG, true, 2200000);
+			vote(chg->usb_icl_votable, USER_ADAPTER_CHG, true, 2000000);
+		}else if (apsd_result->bit & QC_2P0_BIT) {
+			vote(chg->fcc_votable, USER_ADAPTER_CHG, true, 2000000);
+			vote(chg->usb_icl_votable, USER_ADAPTER_CHG, true, 1400000);
+		}else if (apsd_result->bit & FLOAT_CHARGER_BIT) {
+			vote(chg->fcc_votable, USER_ADAPTER_CHG, true, 1500000);
+			vote(chg->usb_icl_votable, USER_ADAPTER_CHG, true, 1500000);
+		}else {
+			vote(chg->fcc_votable, USER_ADAPTER_CHG, true, 1500000);
+			vote(chg->usb_icl_votable, USER_ADAPTER_CHG, true, 2000000);
+		}
+	}else{
+		//pr_err("HDL:it is PD\n");
+		vote(chg->fcc_votable, USER_ADAPTER_CHG, false, 0);
+		vote(chg->usb_icl_votable, USER_ADAPTER_CHG, false, 0);
+	}
+	smblib_err(chg, "IRQ: apsd-done rising; %s detected\n",
+		   apsd_result->name);
+#else
 	smblib_dbg(chg, PR_INTERRUPT, "IRQ: apsd-done rising; %s detected\n",
 		   apsd_result->name);
+#endif
 }
 
 irqreturn_t usb_source_change_irq_handler(int irq, void *data)
@@ -6481,8 +6628,13 @@ irqreturn_t typec_state_change_irq_handler(int irq, void *data)
 		smblib_handle_rp_change(chg, typec_mode);
 	chg->typec_mode = typec_mode;
 
+#if defined(CONFIG_NUBIA_CHARGE_FEATURE)
+	smblib_err(chg, "IRQ: cc-state-change; Type-C %s detected\n",
+				smblib_typec_mode_name[chg->typec_mode]);
+#else
 	smblib_dbg(chg, PR_INTERRUPT, "IRQ: cc-state-change; Type-C %s detected\n",
 				smblib_typec_mode_name[chg->typec_mode]);
+#endif
 
 	power_supply_changed(chg->usb_psy);
 
@@ -7386,6 +7538,66 @@ static void smblib_thermal_regulation_work(struct work_struct *work)
 					rc);
 }
 
+#if defined(CONFIG_NUBIA_CHARGE_FEATURE)
+static void smblib_step_charge_check_work(struct work_struct *work)
+{
+	struct smb_charger *chg = container_of(work, struct smb_charger,
+						step_charge_check_work.work);
+	union power_supply_propval val = {0, };
+	union power_supply_propval pal = {0, };
+	union power_supply_propval temp = {0, };
+	int rc;
+
+	rc = smblib_get_prop_batt_capacity(chg, &val);
+	if (rc < 0)
+		smblib_err(chg, "Couldn't get batt capacity rc=%d\n", rc);
+
+	if((chg->step_chg_vote_flag == false) && (val.intval >= chg->step_chg_base_soc_value)){
+		vote(chg->fcc_votable, USER_STEP_CHG, true, chg->step_chg_base_soc_current);
+		chg->step_chg_vote_flag == true;
+	}
+	else if((chg->step_chg_vote_flag == true) && (val.intval < chg->step_chg_base_soc_value)){
+		vote(chg->fcc_votable, USER_STEP_CHG, false, 0);
+		chg->step_chg_vote_flag == false;
+	}
+
+	rc = smblib_get_prop_batt_health(chg, &pal);
+	if (rc < 0)
+		smblib_err(chg, "Couldn't get batt health rc=%d\n", rc);
+
+	if (pal.intval == POWER_SUPPLY_HEALTH_COLD ||pal.intval == POWER_SUPPLY_HEALTH_HOT ||pal.intval == POWER_SUPPLY_HEALTH_OVERHEAT) 
+		vote(chg->chg_disable_votable, USER_JEITA_FV_CHG, true, 0);
+	else if((val.intval >= chg->jeita_warm_stop_chg_soc) && (pal.intval == POWER_SUPPLY_HEALTH_WARM))
+		vote(chg->chg_disable_votable, USER_JEITA_FV_CHG, true, 0);
+	else
+		vote(chg->chg_disable_votable, USER_JEITA_FV_CHG, false, 0);
+
+	//do not limit adapter power if it is PD charger
+	if(chg->real_charger_type == POWER_SUPPLY_TYPE_USB_PD) {
+		//pr_err("HDL:it is PD in work\n");
+		vote(chg->fcc_votable, USER_ADAPTER_CHG, false, 0);
+		vote(chg->usb_icl_votable, USER_ADAPTER_CHG, false, 0);
+	}
+
+	 rc = smblib_get_prop_from_bms(chg, POWER_SUPPLY_PROP_TEMP,& temp);
+	if (rc < 0)
+		smblib_err(chg, "Couldn't get batt temp rc=%d\n", rc);
+
+	if(chg->lcd_on_limit_enable) {
+		if((chg->lcd_on==1) && (temp.intval >chg->lcd_on_limit_temp))
+			vote(chg->fcc_votable, USER_LCD_CHG, true, chg->lcd_on_limit_fcc);
+		else if (temp.intval <= chg->lcd_on_limit_temp - 10)
+			vote(chg->fcc_votable, USER_LCD_CHG, false, 0);
+		else
+			vote(chg->fcc_votable, USER_LCD_CHG, false, 0);
+	}
+	smblib_err(chg, "soc:%d,h:%d,t:%d\n", val.intval, pal.intval, temp.intval);
+	schedule_delayed_work(&chg->step_charge_check_work, msecs_to_jiffies(10000));
+
+}
+#endif
+
+
 #define MOISTURE_PROTECTION_CHECK_DELAY_MS 300000		/* 5 mins */
 static void smblib_moisture_protection_work(struct work_struct *work)
 {
@@ -8135,6 +8347,9 @@ int smblib_init(struct smb_charger *chg)
 					smblib_pr_lock_clear_work);
 	timer_setup(&chg->apsd_timer, apsd_timer_cb, 0);
 
+	#if defined(CONFIG_NUBIA_CHARGE_FEATURE)
+	INIT_DELAYED_WORK(&chg->step_charge_check_work, smblib_step_charge_check_work);
+	#endif
 	INIT_DELAYED_WORK(&chg->role_reversal_check,
 					smblib_typec_role_check_work);
 
@@ -8260,6 +8475,13 @@ int smblib_init(struct smb_charger *chg)
 		return -EINVAL;
 	}
 
+	#if defined(CONFIG_NUBIA_CHARGE_FEATURE)
+	if(chg->lcd_on_limit_enable) {
+		chg->fb_notifier.notifier_call = smblib_fb_notifier_callback;
+		msm_drm_panel_register_client(&chg->fb_notifier);
+	}
+	#endif
+
 	return rc;
 }
 
@@ -8305,6 +8527,12 @@ int smblib_deinit(struct smb_charger *chg)
 	}
 
 	smblib_iio_deinit(chg);
+	#if defined(CONFIG_NUBIA_CHARGE_FEATURE)
+	if(chg->lcd_on_limit_enable) {
+		if(chg->fb_notifier.notifier_call)
+			msm_drm_panel_unregister_client(&chg->fb_notifier);
+	}
+	#endif
 
 	return 0;
 }

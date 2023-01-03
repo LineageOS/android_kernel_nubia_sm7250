@@ -1,0 +1,2 @@
+
+source "drivers/nubia/touch/synaptics_dsx/Kconfig"

@@ -7,7 +7,7 @@
 #define _USBPD_H
 
 #include <linux/device.h>
-
+#define CONFIG_NUBIA_DOCK_FEATURE
 struct usbpd;
 
 #if IS_ENABLED(CONFIG_USB_PD_POLICY)

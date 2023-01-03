@@ -112,6 +112,9 @@ struct qpnp_qg {
 	struct votable		*vbatt_irq_disable_votable;
 	struct votable		*fifo_irq_disable_votable;
 	struct votable		*good_ocv_irq_disable_votable;
+#if defined(CONFIG_NUBIA_CHARGE_FEATURE)
+	struct votable		*soc_monitor_work_votable;
+#endif
 	u32			qg_base;
 	u8			qg_subtype;
 	u8			qg_mode;

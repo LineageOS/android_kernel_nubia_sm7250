@@ -82,6 +82,12 @@ enum print_reason {
 #define ICL_CHANGE_VOTER		"ICL_CHANGE_VOTER"
 #define OVERHEAT_LIMIT_VOTER		"OVERHEAT_LIMIT_VOTER"
 #define TYPEC_SWAP_VOTER		"TYPEC_SWAP_VOTER"
+#if defined(CONFIG_NUBIA_CHARGE_FEATURE)
+#define USER_STEP_CHG			"USER_STEP_CHG"
+#define USER_ADAPTER_CHG		"USER_ADAPTER_CHG"
+#define USER_JEITA_FV_CHG		"USER_JEITA_FV_CHG"
+#define USER_LCD_CHG			"USER_LCD_CHG"
+#endif
 
 #define BOOST_BACK_STORM_COUNT	3
 #define WEAK_CHG_STORM_COUNT	8
@@ -577,6 +583,19 @@ struct smb_charger {
 	int			init_thermal_ua;
 	u32			comp_clamp_level;
 	int			wls_icl_ua;
+#if defined(CONFIG_NUBIA_CHARGE_FEATURE)
+	bool		step_chg_base_soc;
+	int			step_chg_base_soc_value;
+	int			step_chg_base_soc_current;
+	struct delayed_work	step_charge_check_work;
+	bool		step_chg_vote_flag;
+	int			jeita_warm_stop_chg_soc;
+	bool		lcd_on_limit_enable;
+	int			lcd_on_limit_temp;
+	int			lcd_on_limit_fcc;
+	int			lcd_on;
+	struct notifier_block 	fb_notifier;
+#endif
 	int			cutoff_count;
 	bool			dcin_aicl_done;
 	bool			hvdcp3_standalone_config;
