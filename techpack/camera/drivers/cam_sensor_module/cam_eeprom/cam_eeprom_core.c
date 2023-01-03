@@ -16,6 +16,10 @@
 
 #define MAX_READ_SIZE  0x7FFFF
 
+/*ZTEMT: caipengbo add for write CalibrationData--------Start*/
+extern int32_t cam_nubia_eeprom_io_init(struct camera_io_master io_master);
+/*ZTEMT: caipengbo add for write CalibrationData---------end*/
+
 /**
  * cam_eeprom_read_memory() - read map data into buffer
  * @e_ctrl:     eeprom control struct
@@ -114,6 +118,12 @@ static int cam_eeprom_read_memory(struct cam_eeprom_ctrl_t *e_ctrl,
 					rc);
 				return rc;
 			}
+			/*ZTEMT: caipengbo  add for 3D test eeprom write--------Start*/
+			if ((e_ctrl->io_master_info.cci_client->sid == 0x50)&&(e_ctrl->io_master_info.cci_client->cci_i2c_master==0x00)&&(e_ctrl->cci_num==0))
+			{
+			    cam_nubia_eeprom_io_init(e_ctrl->io_master_info);
+			}
+			/*ZTEMT: caipengbo add for 3D test eeprom write--------End*/
 			memptr += emap[j].mem.valid_size;
 		}
 
