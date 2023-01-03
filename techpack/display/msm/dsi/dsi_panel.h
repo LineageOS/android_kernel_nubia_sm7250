@@ -121,6 +121,11 @@ struct dsi_backlight_config {
 	u32 bl_level;
 	u32 bl_scale;
 	u32 bl_scale_sv;
+#ifdef CONFIG_NUBIA_DISP_PREFERENCE
+	uint32_t backlight_curve[256];
+	int lhbm_gpio;
+#endif
+
 	bool bl_inverted_dbv;
 	u32 bl_dcs_subtype;
 
@@ -159,6 +164,17 @@ enum esd_check_status_mode {
 	ESD_MODE_MAX
 };
 
+#ifdef CONFIG_NUBIA_DISP_PREFERENCE
+enum current_fps {
+	FPS_60,
+	FPS_90,
+	FPS_120,
+	FPS_144,
+	FPS_MAX
+};
+#endif
+
+
 struct drm_panel_esd_config {
 	bool esd_enabled;
 
@@ -170,6 +186,9 @@ struct drm_panel_esd_config {
 	u8 *return_buf;
 	u8 *status_buf;
 	u32 groups;
+#ifdef CONFIG_NUBIA_DISP_PREFERENCE
+	u32 demura_checksum; /* stautus demura esd checksum */
+#endif
 };
 
 struct dsi_panel {
@@ -212,6 +231,14 @@ struct dsi_panel {
 	bool allow_phy_power_off;
 	bool reset_gpio_always_on;
 	atomic_t esd_recovery_pending;
+
+#ifdef CONFIG_NUBIA_DISP_PREFERENCE
+	bool aod_lowpower_bypass;
+	bool hbm_set_bypass;
+	bool dfps_set_bypass;
+	bool supported_144hz;
+	enum current_fps cur_fps;
+#endif
 
 	bool panel_initialized;
 	bool te_using_watchdog_timer;
@@ -344,5 +371,14 @@ void dsi_panel_ext_bridge_put(struct dsi_panel *panel);
 
 void dsi_panel_calc_dsi_transfer_time(struct dsi_host_common_cfg *config,
 		struct dsi_display_mode *mode, u32 frame_threshold_us);
+
+#ifdef CONFIG_NUBIA_DISP_PREFERENCE
+int nubia_dsi_panel_hbm(struct dsi_panel *panel, uint32_t state);
+int nubia_dsi_panel_cabc(struct dsi_panel *panel, uint32_t cabc_modes);
+int dsi_panel_read_data(struct mipi_dsi_device *dsi, u8 cmd, void* buf, size_t len);
+int dsi_panel_write_data(struct mipi_dsi_device *dsi, u8 cmd, void* buf, size_t len);
+void nubia_read_panel_type(struct dsi_panel *panel);
+int nubia_dsi_panel_read_reg(struct dsi_panel *panel, uint8_t addr, u8 *reg_val, size_t len);
+#endif
 
 #endif /* _DSI_PANEL_H_ */

@@ -1010,7 +1010,7 @@ void msm_iounmap(struct platform_device *dev, void __iomem *addr);
 void msm_writel(u32 data, void __iomem *addr);
 u32 msm_readl(const void __iomem *addr);
 
-#define DBG(fmt, ...) DRM_DEBUG_DRIVER(fmt"\n", ##__VA_ARGS__)
+#define DBG(fmt, ...) DRM_DEBUG_DRIVER("%s"fmt"\n", __func__, ##__VA_ARGS__)
 #define VERB(fmt, ...) if (0) DRM_DEBUG_DRIVER(fmt"\n", ##__VA_ARGS__)
 
 static inline int align_pitch(int width, int bpp)

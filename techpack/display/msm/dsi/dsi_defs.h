@@ -51,6 +51,9 @@
 								##__VA_ARGS__)
 #define DSI_DEBUG(fmt, ...)	DRM_DEV_DEBUG(NULL, "[msm-dsi-debug]: "fmt, \
 								##__VA_ARGS__)
+#define NUBIA_DEBUG(fmt, ...)	DRM_NUBIA_DEBUG(NULL, "[nubia-dsi-debug]: "fmt, \
+								##__VA_ARGS__)
+
 /**
  * enum dsi_pixel_format - DSI pixel formats
  * @DSI_PIXEL_FORMAT_RGB565:
@@ -307,6 +310,16 @@ enum dsi_cmd_set_type {
 	DSI_CMD_SET_POST_TIMING_SWITCH,
 	DSI_CMD_SET_QSYNC_ON,
 	DSI_CMD_SET_QSYNC_OFF,
+#ifdef CONFIG_NUBIA_DISP_PREFERENCE
+	DSI_CMD_SET_HBM_ON,
+	DSI_CMD_SET_HBM_OFF,
+	DSI_CMD_SET_HBM_FP_ON,
+	DSI_CMD_SET_HBM_FP_OFF,
+	DSI_CMD_SET_CABC_OFF,
+	DSI_CMD_SET_CABC_LEVEL1,
+	DSI_CMD_SET_CABC_LEVEL2,
+	DSI_CMD_SET_CABC_LEVEL3,
+#endif
 	DSI_CMD_SET_MAX
 };
 
