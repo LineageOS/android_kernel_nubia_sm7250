@@ -25,7 +25,7 @@
 
 #define WCD_MBHC_ADC_HS_THRESHOLD_MV    1700
 #define WCD_MBHC_ADC_HPH_THRESHOLD_MV   75
-#define WCD_MBHC_ADC_MICBIAS_MV         1800
+#define WCD_MBHC_ADC_MICBIAS_MV         2701
 #define WCD_MBHC_FAKE_INS_RETRY         4
 
 static int wcd_mbhc_get_micbias(struct wcd_mbhc *mbhc)
@@ -713,6 +713,10 @@ static void wcd_correct_swch_plug(struct work_struct *work)
 
 	if (cross_conn > 0) {
 		plug_type = MBHC_PLUG_TYPE_GND_MIC_SWAP;
+        if (mbhc->mbhc_cfg->swap_gnd_mic &&
+                          mbhc->mbhc_cfg->swap_gnd_mic(component, true)) {
+                              pr_debug("%s: US_EU gpio present,flip switch\n", __func__);
+                        }
 		pr_debug("%s: cross connection found, Plug type %d\n",
 			 __func__, plug_type);
 		goto correct_plug_type;

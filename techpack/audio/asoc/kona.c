@@ -2,7 +2,6 @@
 /*
  * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
  */
-
 #include <linux/clk.h>
 #include <linux/delay.h>
 #include <linux/gpio.h>
@@ -491,7 +490,7 @@ static struct dev_config mi2s_rx_cfg[] = {
 
 static struct dev_config mi2s_tx_cfg[] = {
 	[PRIM_MI2S] = {SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 1},
-	[SEC_MI2S]  = {SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 1},
+	[SEC_MI2S]  = {SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 2},
 	[TERT_MI2S] = {SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 1},
 	[QUAT_MI2S] = {SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 1},
 	[QUIN_MI2S] = {SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 1},
@@ -915,14 +914,14 @@ static void *def_wcd_mbhc_cal(void);
 static struct wcd_mbhc_config wcd_mbhc_cfg = {
 	.read_fw_bin = false,
 	.calibration = NULL,
-	.detect_extn_cable = true,
+	.detect_extn_cable = false,
 	.mono_stero_detection = false,
 	.swap_gnd_mic = NULL,
 	.hs_ext_micbias = true,
 	.key_code[0] = KEY_MEDIA,
-	.key_code[1] = KEY_VOICECOMMAND,
-	.key_code[2] = KEY_VOLUMEUP,
-	.key_code[3] = KEY_VOLUMEDOWN,
+	.key_code[1] = KEY_VOLUMEUP,
+	.key_code[2] = KEY_VOLUMEDOWN,
+	.key_code[3] = 0,
 	.key_code[4] = 0,
 	.key_code[5] = 0,
 	.key_code[6] = 0,
@@ -4571,6 +4570,7 @@ static bool msm_usbc_swap_gnd_mic(struct snd_soc_component *component, bool acti
 	return fsa4480_switch_event(pdata->fsa_handle, FSA_MIC_GND_SWAP);
 }
 
+#if 0
 static bool msm_swap_gnd_mic(struct snd_soc_component *component, bool active)
 {
 	int value = 0;
@@ -4608,6 +4608,7 @@ static bool msm_swap_gnd_mic(struct snd_soc_component *component, bool active)
 
 	return ret;
 }
+#endif
 
 static int kona_tdm_snd_hw_params(struct snd_pcm_substream *substream,
 				     struct snd_pcm_hw_params *params)
@@ -5733,6 +5734,7 @@ err:
 	return ret;
 }
 
+
 static void *def_wcd_mbhc_cal(void)
 {
 	void *wcd_mbhc_cal;
@@ -5750,14 +5752,14 @@ static void *def_wcd_mbhc_cal(void)
 	btn_high = ((void *)&btn_cfg->_v_btn_low) +
 		(sizeof(btn_cfg->_v_btn_low[0]) * btn_cfg->num_btn);
 
-	btn_high[0] = 75;
-	btn_high[1] = 150;
-	btn_high[2] = 237;
-	btn_high[3] = 500;
-	btn_high[4] = 500;
-	btn_high[5] = 500;
-	btn_high[6] = 500;
-	btn_high[7] = 500;
+	btn_high[0] = 100;
+	btn_high[1] = 250;
+	btn_high[2] = 425;
+	btn_high[3] = 425;;
+	btn_high[4] = 425;;
+	btn_high[5] = 425;;
+	btn_high[6] = 425;;
+	btn_high[7] = 425;;
 
 	return wcd_mbhc_cal;
 }
@@ -6297,22 +6299,6 @@ static struct snd_soc_dai_link msm_common_dai_links[] = {
 	},
 };
 
-static struct snd_soc_dai_link msm_bolero_fe_dai_links[] = {
-	{/* hw:x,33 */
-		.name = LPASS_BE_WSA_CDC_DMA_TX_0,
-		.stream_name = "WSA CDC DMA0 Capture",
-		.cpu_dai_name = "msm-dai-cdc-dma-dev.45057",
-		.platform_name = "msm-pcm-hostless",
-		.codec_name = "bolero_codec",
-		.codec_dai_name = "wsa_macro_vifeedback",
-		.id = MSM_BACKEND_DAI_WSA_CDC_DMA_TX_0,
-		.be_hw_params_fixup = msm_be_hw_params_fixup,
-		.ignore_suspend = 1,
-		.no_host_mode = SND_SOC_DAI_LINK_NO_HOST,
-		.ops = &msm_cdc_dma_be_ops,
-	},
-};
-
 static struct snd_soc_dai_link msm_common_misc_fe_dai_links[] = {
 	{/* hw:x,34 */
 		.name = MSM_DAILINK_NAME(ASM Loopback),
@@ -6482,6 +6468,40 @@ static struct snd_soc_dai_link msm_common_be_dai_links[] = {
 		.ignore_suspend = 1,
 		.ignore_pmdown_time = 1,
 	},
+	/* Incall MAX smart pa DAI Link id = 45 */
+#ifdef CONFIG_SND_SOC_MAX98937
+    {
+        .name = "SEC_MI2S TX Hostless",
+        .stream_name = "SEC_MI2S_TX Hostless",
+        .cpu_dai_name = "SEC_MI2S_TX_HOSTLESS",
+        .platform_name = "msm-pcm-hostless",
+        .dynamic = 1,
+        .dpcm_capture = 1,
+        .trigger = {SND_SOC_DPCM_TRIGGER_POST,
+                    SND_SOC_DPCM_TRIGGER_POST},
+        .no_host_mode = SND_SOC_DAI_LINK_NO_HOST,
+        .ignore_suspend = 1,
+        .ignore_pmdown_time = 1,
+        .codec_dai_name = "snd-soc-dummy-dai",
+        .codec_name = "snd-soc-dummy",
+     },
+         {
+        .name = "SEC_MI2S Hostless",
+        .stream_name = "SEC_MI2S Hostless",
+        .cpu_dai_name = "SEC_MI2S_RX_HOSTLESS",
+        .platform_name = "msm-pcm-hostless",
+        .dynamic = 1,
+        .dpcm_playback = 1,
+        .trigger = {SND_SOC_DPCM_TRIGGER_POST,
+                    SND_SOC_DPCM_TRIGGER_POST},
+        .no_host_mode = SND_SOC_DAI_LINK_NO_HOST,
+        .ignore_suspend = 1,
+        .ignore_pmdown_time = 1,
+        .codec_dai_name = "snd-soc-dummy-dai",
+        .codec_name = "snd-soc-dummy",
+     },
+#endif
+
 	/* Incall Music 2 BACK END DAI Link */
 	{
 		.name = LPASS_BE_VOICE2_PLAYBACK_TX,
@@ -6885,13 +6905,14 @@ static struct snd_soc_dai_link msm_mi2s_be_dai_links[] = {
 		.ops = &msm_mi2s_be_ops,
 		.ignore_suspend = 1,
 	},
+#ifdef CONFIG_SND_SOC_MAX98937
 	{
 		.name = LPASS_BE_SEC_MI2S_RX,
 		.stream_name = "Secondary MI2S Playback",
 		.cpu_dai_name = "msm-dai-q6-mi2s.1",
 		.platform_name = "msm-pcm-routing",
-		.codec_name = "msm-stub-codec.1",
-		.codec_dai_name = "msm-stub-rx",
+		.codec_name = "max98927",
+		.codec_dai_name = "max98927-aif1",
 		.no_pcm = 1,
 		.dpcm_playback = 1,
 		.id = MSM_BACKEND_DAI_SECONDARY_MI2S_RX,
@@ -6905,8 +6926,8 @@ static struct snd_soc_dai_link msm_mi2s_be_dai_links[] = {
 		.stream_name = "Secondary MI2S Capture",
 		.cpu_dai_name = "msm-dai-q6-mi2s.1",
 		.platform_name = "msm-pcm-routing",
-		.codec_name = "msm-stub-codec.1",
-		.codec_dai_name = "msm-stub-tx",
+		.codec_name = "max98927",
+		.codec_dai_name = "max98927-aif1",
 		.no_pcm = 1,
 		.dpcm_capture = 1,
 		.id = MSM_BACKEND_DAI_SECONDARY_MI2S_TX,
@@ -6914,6 +6935,37 @@ static struct snd_soc_dai_link msm_mi2s_be_dai_links[] = {
 		.ops = &msm_mi2s_be_ops,
 		.ignore_suspend = 1,
 	},
+#else
+    {
+	.name = LPASS_BE_SEC_MI2S_RX,
+	.stream_name = "Secondary MI2S Playback",
+	.cpu_dai_name = "msm-dai-q6-mi2s.1",
+	.platform_name = "msm-pcm-routing",
+	.codec_name = "msm-stub-codec.1",
+	.codec_dai_name = "msm-stub-rx",
+	.no_pcm = 1,
+	.dpcm_playback = 1,
+	.id = MSM_BACKEND_DAI_SECONDARY_MI2S_RX,
+	.be_hw_params_fixup = msm_be_hw_params_fixup,
+	.ops = &msm_mi2s_be_ops,
+	.ignore_suspend = 1,
+	.ignore_pmdown_time = 1,
+    },
+    {
+	.name = LPASS_BE_SEC_MI2S_TX,
+	.stream_name = "Secondary MI2S Capture",
+	.cpu_dai_name = "msm-dai-q6-mi2s.1",
+	.platform_name = "msm-pcm-routing",
+	.codec_name = "msm-stub-codec.1",
+	.codec_dai_name = "msm-stub-tx",
+	.no_pcm = 1,
+	.dpcm_capture = 1,
+	.id = MSM_BACKEND_DAI_SECONDARY_MI2S_TX,
+	.be_hw_params_fixup = msm_be_hw_params_fixup,
+	.ops = &msm_mi2s_be_ops,
+	.ignore_suspend = 1,
+    },
+#endif	
 	{
 		.name = LPASS_BE_TERT_MI2S_RX,
 		.stream_name = "Tertiary MI2S Playback",
@@ -7421,7 +7473,6 @@ static struct snd_soc_dai_link msm_afe_rxtx_lb_be_dai_link[] = {
 
 static struct snd_soc_dai_link msm_kona_dai_links[
 			ARRAY_SIZE(msm_common_dai_links) +
-			ARRAY_SIZE(msm_bolero_fe_dai_links) +
 			ARRAY_SIZE(msm_common_misc_fe_dai_links) +
 			ARRAY_SIZE(msm_common_be_dai_links) +
 			ARRAY_SIZE(msm_mi2s_be_dai_links) +
@@ -7655,12 +7706,6 @@ static struct snd_soc_card *populate_snd_card_dailinks(struct device *dev)
 		total_links += ARRAY_SIZE(msm_common_dai_links);
 
 		memcpy(msm_kona_dai_links + total_links,
-		       msm_bolero_fe_dai_links,
-		       sizeof(msm_bolero_fe_dai_links));
-		total_links +=
-			ARRAY_SIZE(msm_bolero_fe_dai_links);
-
-		memcpy(msm_kona_dai_links + total_links,
 		       msm_common_misc_fe_dai_links,
 		       sizeof(msm_common_misc_fe_dai_links));
 		total_links += ARRAY_SIZE(msm_common_misc_fe_dai_links);
@@ -7671,12 +7716,12 @@ static struct snd_soc_card *populate_snd_card_dailinks(struct device *dev)
 		total_links += ARRAY_SIZE(msm_common_be_dai_links);
 
 		memcpy(msm_kona_dai_links + total_links,
-		       msm_wsa_cdc_dma_be_dai_links,
-		       sizeof(msm_wsa_cdc_dma_be_dai_links));
-		total_links +=
-			ARRAY_SIZE(msm_wsa_cdc_dma_be_dai_links);
+                      msm_wsa_cdc_dma_be_dai_links,
+                      sizeof(msm_wsa_cdc_dma_be_dai_links));
+               total_links +=
+                       ARRAY_SIZE(msm_wsa_cdc_dma_be_dai_links);
 
-		memcpy(msm_kona_dai_links + total_links,
+               memcpy(msm_kona_dai_links + total_links,
 		       msm_rx_tx_cdc_dma_be_dai_links,
 		       sizeof(msm_rx_tx_cdc_dma_be_dai_links));
 		total_links +=
@@ -8485,6 +8530,7 @@ static int msm_asoc_machine_probe(struct platform_device *pdev)
 	uint index = 0;
 	struct clk *lpass_audio_hw_vote = NULL;
 
+   dev_err(&pdev->dev, "%s: liqiang_debug  msm_asoc_machine_probe enter\n",__func__);
 	if (!pdev->dev.of_node) {
 		dev_err(&pdev->dev, "%s: No platform supplied from device tree\n", __func__);
 		return -EINVAL;
@@ -8531,20 +8577,23 @@ static int msm_asoc_machine_probe(struct platform_device *pdev)
 	}
 
 	ret = msm_init_aux_dev(pdev, card);
+    dev_err(&pdev->dev, "%s: liqiang_debug 1 ret=%d\n",__func__, ret);
 	if (ret)
 		goto err;
-
+    dev_err(&pdev->dev, "%s: liqiang_debug 1 devm_snd_soc_register_card  card_name =%s\n",__func__, card->name);
 	ret = devm_snd_soc_register_card(&pdev->dev, card);
+
 	if (ret == -EPROBE_DEFER) {
 		if (codec_reg_done)
 			ret = -EINVAL;
+             dev_err(&pdev->dev, "%s: liqiang_debug  devm_snd_soc_register_card exit\n",__func__);
 		goto err;
 	} else if (ret) {
 		dev_err(&pdev->dev, "%s: snd_soc_register_card failed (%d)\n",
 			__func__, ret);
 		goto err;
 	}
-	dev_info(&pdev->dev, "%s: Sound card %s registered\n",
+	dev_err(&pdev->dev, "%s: Sound card %s registered\n",
 		 __func__, card->name);
 
 	/* Get maximum WSA device count for this platform */
@@ -8613,6 +8662,7 @@ static int msm_asoc_machine_probe(struct platform_device *pdev)
 	 * entry is not found in DT file as some targets do not support
 	 * US-Euro detection
 	 */
+#if 0
 	pdata->us_euro_gpio_p = of_parse_phandle(pdev->dev.of_node,
 					"qcom,us-euro-gpios", 0);
 	if (!pdata->us_euro_gpio_p) {
@@ -8623,6 +8673,7 @@ static int msm_asoc_machine_probe(struct platform_device *pdev)
 			"qcom,us-euro-gpios");
 		wcd_mbhc_cfg.swap_gnd_mic = msm_swap_gnd_mic;
 	}
+#endif
 
 	if (wcd_mbhc_cfg.enable_usbc_analog)
 		wcd_mbhc_cfg.swap_gnd_mic = msm_usbc_swap_gnd_mic;
