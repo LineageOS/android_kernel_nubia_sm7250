@@ -126,7 +126,7 @@
 
 		clock-names = "core_clk", "rbbmtimer_clk", "mem_clk",
 				"iface_clk", "mem_iface_clk", "gmu_clk",
-				"smmu_vote", "bimc_gpu_clk";
+				"smmu_vote";
 
 		/* Bus Scale Settings */
 		qcom,gpubw-dev = <&gpubw>;
@@ -267,8 +267,6 @@
 
 				qcom,initial-pwrlevel = <6>;
 				qcom,ca-target-pwrlevel = <5>;
-				qcom,gpu-bimc-interface-clk-freq = <768000000>;
-
 				/* TURBO_L1 */
 				qcom,gpu-pwrlevel@0 {
 					reg = <0>;
@@ -350,7 +348,6 @@
 
 				qcom,initial-pwrlevel = <6>;
 				qcom,ca-target-pwrlevel = <5>;
-				qcom,gpu-bimc-interface-clk-freq = <768000000>;
 
 				/* TURBO_L1 */
 				qcom,gpu-pwrlevel@0 {

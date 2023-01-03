@@ -14,3 +14,4 @@
 &ufsphy_mem {
 	vdda-phy-always-on;
 };
+#include NUBIA_OVERWRITE_DTSI_FILE

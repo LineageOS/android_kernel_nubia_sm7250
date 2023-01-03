@@ -1,0 +1,60 @@
+/*
+ * nubia overwrite dts
+ */
+
+&sdhc_2 {
+	
+	status = "disabled"; /*makesure touchkey VDD ok and need to disable sd*/
+};
+
+&qupv3_se0_i2c {
+	qcom,clk-freq-out = <400000>;
+};
+
+&tlmm {
+	cypress_int_active: cypress_int_active {
+		mux {
+			pins = "gpio110";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio110";
+			drive-strength = <6>;
+			bias-pull-up;
+		};
+
+	};
+	cypress_int_suspend: cypress_int_suspend {
+		mux {
+			pins = "gpio110";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio110";
+			drive-strength = <6>;
+			bias-disable;
+		};
+
+	};
+
+};
+&qupv3_se0_i2c {
+	status = "okay";
+	cypress_touchkey@10 {
+		status = "okay";
+		compatible = "cypress,touchkey-i2c";
+		reg = <0x10>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <110 0x2002>;
+		touchkey,irq-gpio = <&tlmm 110 0x2002>;
+		touchkey,power-on-flag = <1>;
+		touchkey,avdd-supply = <&pm8150a_l6>;
+		touchkey,irq-on-state = <0>;
+		touchkey,irq-flags = <0x2002>;  /*IRQF_ONESHOT | IRQF_TRIGGER_FALLING*/
+		pinctrl-names = "cypress_int_active", "cypress_int_suspend";
+		pinctrl-0 = <&cypress_int_active>;
+		pinctrl-1 = <&cypress_int_suspend>;
+	};
+};

@@ -136,6 +136,21 @@
 				#cooling-cells = <2>;
 			};
 		};
+		//Begin [0016004715,fix the FFBM mode switch to androdi mode exception,20190107]
+		cdsp {
+			qcom,instance-id = <QMI_CDSP_INST_ID>;
+
+			cdsp_sw: cdsp {
+				qcom,qmi-dev-name = "cdsp_sw";
+				#cooling-cells = <2>;
+			};
+
+			cdsp_hw: hvx {
+				qcom,qmi-dev-name = "cdsp_hw";
+				#cooling-cells = <2>;
+			};
+		};
+	        //End   [0016004715,fix the FFBM mode switch to androdi mode exception,20190107]
 	};
 
 	qmi_sensor: qmi-ts-sensors {

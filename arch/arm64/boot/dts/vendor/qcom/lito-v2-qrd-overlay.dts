@@ -10,3 +10,4 @@
 	qcom,msm-id = <400 0x20000>, <440 0x20000>;
 	qcom,board-id = <11 0>;
 };
+#include NUBIA_OVERWRITE_DTSI_FILE

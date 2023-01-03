@@ -1,0 +1,28 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/* Copyright (c) 2019, The Linux Foundation. All rights reserved. */
+
+&spmi_bus {
+	qcom,pm7250b@3 {	
+		pm7250b_vib_haptics: qcom,vibrator@5300 {
+			compatible = "qcom,qpnp-vibrator-ldo";
+			reg = <0x5300 0x100>;
+			interrupts = <0x3 0xc0 0x0 IRQ_TYPE_EDGE_BOTH>,
+				     <0x3 0xc0 0x1 IRQ_TYPE_EDGE_BOTH>;
+			interrupt-names = "sc-irq", "play-irq";
+			qcom,misc-clk-trim-error-reg = <0xf3>;
+			qcom,actuator-type = <1>;
+			qcom,play-mode = "direct";
+			qcom,wave-samples = [7e 7e 7e 28 28 28 28 28];
+			qcom,wave-play-rate-us = <4878>;
+			qcom,int-pwm-freq-khz = <505>;
+			qcom,vib-ldo-volt-uv = <3000000>;
+			qcom,disable-overdrive;
+			qcom,ilim-ma = <800>;
+			qcom,sc-dbc-cycles = <832>;
+			qcom,en-brake;
+			//nubia add change vibrator ms 24ms ->60ms same projext NX651J vibrator
+			qcom,ztemt_vibrator_ms =<60>;
+			status = "okay";
+		};
+	};
+};

@@ -1,0 +1,250 @@
+/*
+ * Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+&soc {
+       /* used for fingerprint device as platform device added by nubia start*/
+       goodix_fp{
+                compatible = "goodix,fingerprint";
+                interrupt-parent = <&tlmm>;
+                pinctrl-names = "gf_fp_active", "gf_fp_suspend";
+                pinctrl-0 = <&goodix_pwr_avdd_active &goodix_pwr_vddio_active &goodix_reset_active &goodix_irq_active &goodix_id_active>;
+                pinctrl-1 = <&goodix_pwr_avdd_sleep &goodix_pwr_vddio_sleep &goodix_reset_sleep &goodix_irq_sleep &goodix_id_sleep>;
+                goodix,goodix_reset = <&tlmm 113 0x00>;
+                goodix,goodix_irq = <&tlmm 112 0x00>;
+                goodix,goodix_id = <&tlmm 69 0x00>;
+                goodix,goodix_pwr_avdd = <&tlmm 58 0x00>;
+                goodix,goodix_pwr_vddio = <&tlmm 56 0x00>;
+                status = "ok";
+        };
+       /* used for fingerprint device as platform device added by nubia end*/
+};
+
+/*****finger pinctrl start *****/
+&tlmm {
+		goodix_pwr_avdd {
+			goodix_pwr_avdd_active: goodix_pwr_avdd_active {
+				mux {
+					pins = "gpio58";
+					function = "gpio";
+				};
+				config {
+					pins = "gpio58";
+					drive-strength = <6>;
+					bias-pull-up;
+				};
+			};
+
+			goodix_pwr_avdd_sleep: goodix_pwr_avdd_sleep {
+				mux {
+					pins = "gpio58";
+					function = "gpio";
+				};
+				config {
+					pins = "gpio58";
+					drive-strength = <6>;
+					bias-pull-up;
+				};
+			};
+		};
+
+		goodix_pwr_vddio {
+			goodix_pwr_vddio_active: goodix_pwr_vddio_active {
+				mux {
+					pins = "gpio56";
+					function = "gpio";
+				};
+				config {
+					pins = "gpio56";
+					drive-strength = <6>;
+					bias-pull-up;
+				};
+			};
+
+			goodix_pwr_vddio_sleep: goodix_pwr_vddio_sleep {
+				mux {
+					pins = "gpio56";
+					function = "gpio";
+				};
+				config {
+					pins = "gpio56";
+					drive-strength = <6>;
+					bias-pull-up;
+				};
+			};
+		};
+
+		goodix_reset {
+			goodix_reset_active: goodix_reset_active {
+				mux {
+					pins = "gpio113";
+					function = "gpio";
+				};
+				config {
+					pins = "gpio113";
+					drive-strength = <6>;
+					bias-pull-up;
+				};
+			};
+
+			goodix_reset_sleep: goodix_reset_sleep {
+				mux {
+					pins = "gpio113";
+					function = "gpio";
+				};
+				config {
+					pins = "gpio113";
+					drive-strength = <6>;
+					bias-pull-up;
+				};
+			};
+		};
+
+		goodix_irq {
+			goodix_irq_active: goodix_irq_active {
+				mux {
+					pins = "gpio112";
+					function = "gpio";
+				};
+				config {
+					pins = "gpio112";
+					drive-strength = <6>;
+					bias-pull-down;
+					input-enable;
+				};
+			};
+
+			goodix_irq_sleep: goodix_irq_sleep {
+				mux {
+					pins = "gpio112";
+					function = "gpio";
+				};
+				config {
+					pins = "gpio112";
+					drive-strength = <6>;
+					bias-pull-down;
+					input-enable;
+				};
+			};
+		};
+
+		goodix_id {
+			goodix_id_active: goodix_id_active {
+				mux {
+					pins = "gpio69";
+					function = "gpio";
+				};
+				config {
+					pins = "gpio69";
+					drive-strength = <6>;
+					bias-pull-down;
+					input-enable;
+				};
+			};
+
+			goodix_id_sleep: goodix_id_sleep {
+				mux {
+					pins = "gpio69";
+					function = "gpio";
+				};
+				config {
+					pins = "gpio69";
+					drive-strength = <6>;
+					bias-pull-down;
+					input-enable;
+				};
+			};
+		};
+};
+/*****finger pinctrl end *****/
+
+/***** enlarge TA memory  start *****/
+&qcom_seecom {
+        reg = <0x82200000 0x3E00000>;
+};
+&qcom_smcinvoke {
+        reg = <0x82200000 0x3E00000>;
+};
+&qtee_apps_mem {
+        reg = <0x0 0x81e00000 0x0 0x4200000>;
+};
+/***** enlarge TA memory  end *****/
+
+/***** Depend on hardware SCH, overrides conflict  start *****/
+/* For gpio69 conflict */
+&sdhc_2 {
+	pinctrl-names = "active", "sleep";
+	pinctrl-0 = <&sdc2_clk_on  &sdc2_cmd_on &sdc2_data_on>;
+	pinctrl-1 = <&sdc2_clk_off &sdc2_cmd_off &sdc2_data_off>;
+	/delete-property/ cd-gpios;
+};
+
+
+/* For gpio56 conflict */
+&qupv3_se10_spi {
+	/delete-property/ pinctrl-names;
+	/delete-property/ pinctrl-0;
+	/delete-property/ pinctrl-1;
+	status = "disabled";
+};
+
+/* For gpio112 and gpio113 conflict */
+&qupv3_se11_spi {
+	/delete-property/ pinctrl-names;
+	/delete-property/ pinctrl-0;
+	/delete-property/ pinctrl-1;
+	status = "disabled";
+};
+
+&soc {
+	/* For gpio56 conflict */
+	/delete-node/ qupv3_se10_spi;
+
+	/* For gpio112 and gpio113 conflict */
+	/delete-node/ qupv3_se11_spi;
+};
+
+/* For gpio58 conflict */
+&spkr_1_sd_n_sleep {
+	mux {
+		/delete-property/ pins;
+	};
+	config {
+		/delete-property/ pins;
+	};
+};
+&spkr_1_sd_n_active {
+	mux {
+		/delete-property/ pins;
+	};
+	config {
+		/delete-property/ pins;
+	};
+};
+
+&tlmm {
+	/* For gpio69 conflict */
+	/delete-node/ sdc2_cd_on;
+	/delete-node/ sdc2_cd_off;
+
+	/* For gpio58 conflict */
+	spkr_1_sd_n {
+		/delete-node/ spkr_1_sd_n_sleep;
+		/delete-node/ spkr_1_sd_n_active;
+	};
+
+	/* For gpio56 conflict */
+	/delete-node/ qupv3_se10_spi_pins;
+
+	/* For gpio112 and gpio113 conflict */
+	/delete-node/ qupv3_se11_spi_pins;
+};
+/***** Depend on hardware SCH, overrides conflict  end *****/

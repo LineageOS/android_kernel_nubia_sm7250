@@ -358,7 +358,7 @@
 			compatible = "android,firmware";
 			vbmeta {
 				compatible = "android,vbmeta";
-				parts = "vbmeta,boot,system,vendor,dtbo";
+				parts = "vbmeta,boot,system,vendor,dtbo,recovery";
 			};
 
 			fstab {
@@ -368,7 +368,7 @@
 					dev = "/dev/block/platform/soc/1d84000.ufshc/by-name/vendor";
 					type = "ext4";
 					mnt_flags = "ro,barrier=1,discard";
-					fsmgr_flags = "wait,slotselect,avb";
+					fsmgr_flags = "wait,avb";
 					status = "ok";
 				};
 			};
@@ -4512,21 +4512,6 @@
 		etflpass_reg {
 			qcom,dump-size = <0x1000>;
 			qcom,dump-id = <0x104>;
-		};
-
-		osm_reg {
-			qcom,dump-size = <0x400>;
-			qcom,dump-id = <0x163>;
-		};
-
-		pcu_reg {
-			qcom,dump-size = <0x400>;
-			qcom,dump-id = <0x164>;
-		};
-
-		fsm_data {
-			qcom,dump-size = <0x400>;
-			qcom,dump-id = <0x165>;
 		};
 	};
 

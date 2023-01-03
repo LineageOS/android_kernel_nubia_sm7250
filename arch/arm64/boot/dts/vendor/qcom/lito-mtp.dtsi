@@ -1,7 +1,8 @@
 #include <dt-bindings/gpio/gpio.h>
 #include "lito-audio-overlay.dtsi"
 #include "lito-pmic-overlay.dtsi"
-#include "camera/lito-camera-sensor-mtp.dtsi"
+//#include "camera/lito-camera-sensor-mtp.dtsi"    //delete by camera
+#include "../nubia/NX651J/camera.dtsi"
 #include "lito-sde-display.dtsi"
 #include "lito-thermal-overlay.dtsi"
 
@@ -37,8 +38,7 @@
 
 	mtp_batterydata: qcom,battery-data {
 		qcom,batt-id-range-pct = <15>;
-		#include "qg-batterydata-alium-3600mah.dtsi"
-		#include "qg-batterydata-atl466271_3300mAh.dtsi"
+		#include "../nubia/NX651J/nubia-fg-gen4-batterydata-5080mah.dtsi"
 	};
 };
 
@@ -196,8 +196,9 @@
 			   "skin_temp";
 	qcom,battery-data = <&mtp_batterydata>;
 	qcom,sec-charger-config = <1>;
-	qcom,auto-recharge-soc = <98>;
-	qcom,step-charging-enable;
+	qcom,auto-recharge-soc = <99>;
+	qcom,auto-recharge-vbat-mv = <4340>;
+	//qcom,step-charging-enable;
 	qcom,sw-jeita-enable;
 	qcom,charger-temp-max = <800>;
 	qcom,smb-temp-max = <800>;
@@ -205,9 +206,18 @@
 	qcom,fcc-stepping-enable;
 	qcom,fcc-step-delay-ms = <100>;
 	qcom,fcc-step-size-ua = <100000>;
+	qcom,chg-term-src = <1>;
+	qcom,chg-term-current-ma = <(-600)>;
 	qcom,smb-internal-pull-kohm = <0>;
 	qcom,en-skin-therm-mitigation;
 	qcom,hvdcp3-standalone-config;
+	qcom,step-chg-base-soc;						//use nubia step soc and stop qcom sw step if specified
+	qcom,step-chg-base-soc-value = <70>;		//if soc higher than this value, then reduce the fcc
+	qcom,step-chg-base-soc-current = <3300000>;//the reduce the fcc value, mA
+	qcom,jeita-warm-stop-chg-soc = <70>; //if battery is warm, stop chg when soc is higher than this threshold
+	qcom,lcd-on-limit-enable;
+	qcom,lcd-on-limit-temp = <400>;
+	qcom,lcd-on-limit-fcc = <1200000>;
 };
 
 &pm7250b_qg {
@@ -217,7 +227,7 @@
 	io-channel-names = "batt-therm",
 			   "batt-id";
 	qcom,battery-data = <&mtp_batterydata>;
-	qcom,qg-iterm-ma = <100>;
+	qcom,qg-iterm-ma = <1500>;
 	qcom,hold-soc-while-full;
 	qcom,linearize-soc;
 	qcom,cl-feedback-on;
@@ -311,6 +321,26 @@
 		pinctrl-1 = <&nfc_int_suspend &nfc_enable_suspend
 				&nfc_clk_req_suspend>;
 	};
+
+    spkamp@3a {/* max98927 smartpa device*/
+        compatible = "maxim,max98927L";
+        status = "okay";
+        reg = <0x3a>;
+        mono_stereo_mode = <0>;
+        interleave_mode = <0>;
+        maxim,98927-reset-gpio = <&tlmm 64 0>;
+    };
+/*
+    spkamp@3d { max98927 smartpa device
+        compatible = "maxim,max98927R";
+        status = "okay";
+        reg = <0x3d>;
+        mono_stereo_mode = <0>;
+        interleave_mode = <0>;
+        maxim,98927-reset-gpio = <&tlmm 98 0>;
+    };
+*/
+
 };
 
 &dsi_sim_cmd {
@@ -337,3 +367,52 @@
 	qcom,platform-reset-gpio = <&pm8150l_gpios 3 0>;
 };
 
+&qupv3_se9_i2c {
+	/* Multi-ee usecase */
+	qcom,shared;
+};
+&pm7250b_gpios {
+	smb_stat {
+		smb_stat_default: smb_stat_default {
+			pins = "gpio6";
+			function = "normal";
+			input-enable;
+			bias-pull-up;
+			qcom,pull-up-strength = <PMIC_GPIO_PULL_UP_30>;
+			power-source = <0>;
+		};
+	};
+};
+&qupv3_se9_i2c {
+	status = "ok";
+	#include "smb1390.dtsi"
+};
+
+&smb1390 {
+	//delete-property/ interrupts;
+	interrupts = <0x2 0xc5 0x0 IRQ_TYPE_LEVEL_LOW>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&smb_stat_default>;
+	status = "ok";
+};
+
+&smb1390_charger {
+	compatible = "qcom,smb1390-charger-psy";
+	io-channels = <&pm7250b_vadc ADC_AMUX_THM2>;
+	io-channel-names = "cp_die_temp";
+	//qcom,parallel-input-mode = <1>; /* USBIN */
+	qcom,parallel-input-mode = <3>; /* USBIN */
+	qcom,parallel-output-mode = <2>; /* VBAT */
+	qcom,min-ilim-ua=<750000>;
+	status = "ok";
+};
+
+&smb1390_slave {
+	//status = "ok";
+	status = "disabled";
+};
+
+&smb1390_slave_charger {
+	//status = "ok";
+	status = "disabled";
+};

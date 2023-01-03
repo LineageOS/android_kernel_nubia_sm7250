@@ -226,13 +226,17 @@
 			#address-cells = <1>;
 			#size-cells = <1>;
 
-			qcom,vbatt-cutoff-mv = <3200>;
+			qcom,vbatt-cutoff-mv = <3300>;
 			qcom,vbatt-low-mv = <3300>;
 			qcom,vbatt-low-cold-mv = <3700>;
 			qcom,vbatt-empty-mv = <3000>;
 			qcom,vbatt-empty-cold-mv = <3000>;
 			qcom,s3-entry-fifo-length = <2>;
-
+                         //Begin [0016004715,fix the pmic wakeup in screen off,20191120]
+		         qcom,s2-acc-interval-ms =<100>;
+		         qcom,s3-entry-ibat-ua =<30000>; //18000
+		         qcom,s3-exit-ibat-ua =<38000>;
+                         //End [0016004715,fix the pmic wakeup in screen off,20191120]
 			qcom,pmic-revid = <&pm7250b_revid>;
 
 			qcom,qgauge@4800 {

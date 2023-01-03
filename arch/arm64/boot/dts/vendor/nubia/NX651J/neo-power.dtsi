@@ -1,0 +1,14 @@
+&spmi_bus {
+	qcom,pm7250b@2 {
+		neo,battery {
+			compatible = "nubia,neo-battery";
+			#address-cells = <1>;
+			#size-cells = <1>;
+			//reg = <0x1000 0x700>;
+			neo,batt-capacity-uah = <5100000>;
+			neo,batt-cutoff-mv = <3450>;
+			neo,batt-soc-increase-per-sec = <10>;
+			neo,batt-soc-decrease-per-sec = <60>;
+		};
+	};
+};

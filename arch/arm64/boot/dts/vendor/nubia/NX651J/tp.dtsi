@@ -1,0 +1,48 @@
+/*
+ * Copyright (c) 2015-2016, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+&pm8150_l13 {
+	status = "ok";
+	qcom,init-voltage = <2960000>;
+	regulator-boot-on;
+};
+
+&qupv3_se7_i2c {
+		status = "okay";
+                synaptics_dsx@20 {
+                        compatible = "synaptics,dsx-i2c";
+                        reg = <0x20>;
+                        interrupt-parent = <&tlmm>;
+                        interrupts = <9 0x2008>;
+                        //vdd-supply = <&pm8150_l14>;
+                        avdd-supply = <&pm8150_l13>;
+                        pinctrl-names = "pmx_ts_active", "pmx_ts_suspend",
+                                "pmx_ts_release";
+                        pinctrl-0 = <&ts_active>;
+                        pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
+                        pinctrl-2 = <&pmx_ts_release>;
+                        synaptics,pwr-reg-name = "avdd";
+                        //synaptics,bus-reg-name = "vdd";
+                        synaptics,power-gpio = <&tlmm 83 0x00>;
+                        synaptics,power-on-state = <1>;
+                        synaptics,power-delay-ms = <200>;
+                        synaptics,reset-active-ms = <20>;
+                        synaptics,reset-delay-ms = <100>;
+                        synaptics,ub-i2c-addr = <0x20>;
+                        synaptics,irq-gpio = <&tlmm 9 0x2008>;
+                        synaptics,reset-gpio = <&tlmm 8 0x0>;
+                        synaptics,firmware-image-name = "nubia_tp_fw.img";
+                        synaptics,irq-on-state = <0>;
+                        synaptics,reset-on-state = <0>;
+                };
+};
