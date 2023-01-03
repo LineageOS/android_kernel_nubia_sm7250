@@ -17,6 +17,10 @@
 #include <trace/events/power.h>
 #include <linux/sched/sysctl.h>
 
+//nubia add for cpu ctrl
+unsigned int nubia_cpufreq_ctrl_value=0;
+//nubia end
+
 struct sugov_tunables {
 	struct gov_attr_set	attr_set;
 	unsigned int		up_rate_limit_us;
@@ -303,6 +307,22 @@ static unsigned int get_next_freq(struct sugov_policy *sg_policy,
 				policy->cpuinfo.max_freq : policy->cur;
 
 	freq = map_util_freq(util, freq, max);
+    //nubia add for cpu ctrl
+    switch (nubia_cpufreq_ctrl_value) {
+        case 1:
+            if(freq > 2000000) {
+                freq = (freq *100 * util)/(98*max);
+            }
+            break;
+        case 2:
+            if(freq > 2323200){
+                freq = 2419200;
+            }
+            break;
+        default:
+            break;
+    }
+    //nubia end
 	trace_sugov_next_freq(policy->cpu, util, max, freq);
 
 	if (freq == sg_policy->cached_raw_freq && !sg_policy->need_freq_update)
@@ -1041,10 +1061,27 @@ static ssize_t pl_store(struct gov_attr_set *attr_set, const char *buf,
 	return count;
 }
 
+//nubia add for cpu ctrl
+static ssize_t cpufreq_ctrl_show(struct gov_attr_set *attr_set, char *buf)
+{
+    return scnprintf(buf, PAGE_SIZE, "%d\n", nubia_cpufreq_ctrl_value);
+}
+
+static ssize_t cpufreq_ctrl_store(struct gov_attr_set *attr_set, const char *buf,
+                    size_t count)
+{
+    sscanf(buf, "%d", &nubia_cpufreq_ctrl_value);
+    return count;
+}
+//nubia end
+
 static struct governor_attr hispeed_load = __ATTR_RW(hispeed_load);
 static struct governor_attr hispeed_freq = __ATTR_RW(hispeed_freq);
 static struct governor_attr rtg_boost_freq = __ATTR_RW(rtg_boost_freq);
 static struct governor_attr pl = __ATTR_RW(pl);
+//nubia add for cpu ctrl
+static struct governor_attr cpufreq_ctrl = __ATTR_RW(cpufreq_ctrl);
+//nubia end
 
 static struct attribute *sugov_attributes[] = {
 	&up_rate_limit_us.attr,
@@ -1053,6 +1090,9 @@ static struct attribute *sugov_attributes[] = {
 	&hispeed_freq.attr,
 	&rtg_boost_freq.attr,
 	&pl.attr,
+    //nubia add for cpu ctrl
+    &cpufreq_ctrl.attr,
+    //nubia end
 	NULL
 };
 
