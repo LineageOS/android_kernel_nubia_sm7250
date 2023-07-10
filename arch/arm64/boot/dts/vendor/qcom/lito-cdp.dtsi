@@ -37,7 +37,7 @@
 
 	mtp_batterydata: qcom,battery-data {
 		qcom,batt-id-range-pct = <15>;
-		#include "../nubia/NX651J/nubia-fg-gen4-batterydata-5080mah.dtsi"
+		#include "../nubia/common/nubia-fg-gen4-batterydata-5080mah.dtsi"
 	};
 };
 

@@ -19,8 +19,8 @@
 #include "dsi-panel-sim-dualmipi-dsc375-cmd.dtsi"
 #include "dsi-panel-sim-sec-hd-cmd.dtsi"
 #include "dsi-panel-rm69299-visionox-fhd-plus-video.dtsi"
-#include "../nubia/NX651J/dsi_r66455_1080_2340_amoled_cmd.dtsi"
-#include "../nubia/NX651J/dsi_r66451_1080_2340_amoled_cmd.dtsi"
+#include "../nubia/common/dsi_r66455_1080_2340_amoled_cmd.dtsi"
+#include "../nubia/common/dsi_r66451_1080_2340_amoled_cmd.dtsi"
 #include "dsi-panel-r66451-dsc-fhd-plus-144hz-cmd.dtsi"
 #include <dt-bindings/clock/mdss-7nm-pll-clk.h>
 

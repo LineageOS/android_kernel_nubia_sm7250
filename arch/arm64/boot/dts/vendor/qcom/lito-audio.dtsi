@@ -1,5 +1,5 @@
 #include <dt-bindings/clock/qcom,audio-ext-clk.h>
-#include "../nubia/NX651J/msm-audio-lpass.dtsi"
+#include "../nubia/common/msm-audio-lpass.dtsi"
 
 &msm_audio_ion {
 	iommus = <&apps_smmu 0x1401 0x0>;

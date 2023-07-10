@@ -2,7 +2,7 @@
 #include "lito-audio-overlay.dtsi"
 #include "lito-pmic-overlay.dtsi"
 //#include "camera/lito-camera-sensor-mtp.dtsi"    //delete by camera
-#include "../nubia/NX651J/camera.dtsi"
+#include "../nubia/common/camera.dtsi"
 #include "lito-sde-display.dtsi"
 #include "lito-thermal-overlay.dtsi"
 
@@ -38,7 +38,7 @@
 
 	mtp_batterydata: qcom,battery-data {
 		qcom,batt-id-range-pct = <15>;
-		#include "../nubia/NX651J/nubia-fg-gen4-batterydata-5080mah.dtsi"
+		#include "../nubia/common/nubia-fg-gen4-batterydata-5080mah.dtsi"
 	};
 };
 

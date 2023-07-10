@@ -1,11 +1,13 @@
 /*
- * nubia overwrite dts for NX651j
+ * nubia overwrite dts for NX651j-EEA
  */
 #include "../common/tp.dtsi"
 #include "../common/others.dtsi"
 #include "../common/leds.dtsi"
 #include "../common/haptics.dtsi"
 #include "../common/touchkey.dtsi"
+#include "aw22xxx.dtsi"
 #include "../common/finger.dtsi"
+#include "nfc.dtsi"
 #include "../common/neo-power.dtsi"
 #include "../common/sensors.dtsi"
