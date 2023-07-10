@@ -182,7 +182,11 @@ dtc_cpp_flags  = -Wp,-MD,$(depfile).pre.tmp -nostdinc                    \
 		 -undef -D__DTS__
  
 #nubia: Set nubia overwrite dtsi file
+ifeq ($(CONFIG_MACH_NUBIA_NX651J),y)
 dtc_cpp_flags += -DNUBIA_OVERWRITE_DTSI_FILE=\"../nubia/NX651J/head.dtsi\"
+else ifeq ($(CONFIG_MACH_NUBIA_NX651J-EEA),y)
+dtc_cpp_flags += -DNUBIA_OVERWRITE_DTSI_FILE=\"../nubia/NX651J-EEA/head.dtsi\"
+endif
 
 # Useful for describing the dependency of composite objects
 # Usage:
