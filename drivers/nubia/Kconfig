@@ -98,8 +98,8 @@ menu "Nubia board selection"
     help
       Support for Nubia Play 5G variant
 
- config MACH_NUBIA_NX651J-EEA
-    bool "NUBIA_NX651J-EEA board"
+ config MACH_NUBIA_NX651J_EEA
+    bool "NUBIA_NX651J_EEA board"
     select MACH_NUBIA_SM7250
     help
       Support for Nubia Red Magic 5G Lite variant
