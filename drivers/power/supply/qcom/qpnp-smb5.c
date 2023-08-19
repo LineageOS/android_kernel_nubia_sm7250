@@ -480,7 +480,7 @@ static int smb5_parse_dt_misc(struct smb5 *chip, struct device_node *node)
 	rc = of_property_read_u32(node,
 	     	"qcom,jeita-warm-stop-chg-soc", &chg->jeita_warm_stop_chg_soc);
 	if (rc < 0)
-		chg->jeita_warm_stop_chg_soc = 70;
+	chg->jeita_warm_stop_chg_soc = 95;
 
 	pr_err("nubia charge:%d,soc:%d,i:%d; step-chgring-enable=%d,jeita_warm_stop_chg_soc:%d\n", 
 			chg->step_chg_base_soc,
