@@ -2018,7 +2018,7 @@ static int report_palm_event(struct synaptics_rmi4_data *rmi4_data)
 #endif
 
 #ifdef NUBIA_TOUCH_SYNAPTICS
-static void synaptics_nubiaForcedResume()
+void synaptics_nubiaForcedResume(struct work_struct *work)
 {
 	while((g_rmi4_data->fp_event_count < FORCED_RESUME)&&
 			g_rmi4_data->fp_down_input_flag) {
