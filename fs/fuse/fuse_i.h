@@ -124,17 +124,6 @@ enum {
 
 struct fuse_conn;
 
-/**
- * Reference to lower filesystem file for read/write operations handled in
- * passthrough mode.
- * This struct also tracks the credentials to be used for handling read/write
- * operations.
- */
-struct fuse_passthrough {
-	struct file *filp;
-	struct cred *cred;
-};
-
 /** FUSE specific file data */
 struct fuse_file {
 	/** Fuse connection for this file */
@@ -161,8 +150,11 @@ struct fuse_file {
 	/** Entry on inode's write_files list */
 	struct list_head write_entry;
 
-	/** Container for data related to the passthrough functionality */
-	struct fuse_passthrough passthrough;
+	/**
+     * Reference to lower filesystem file for read/write operations
+     * handled in pass-through mode
+	 */
+    struct file *passthrough_filp;
 
 	/** RB node to be linked on fuse_conn->polled_files */
 	struct rb_node polled_node;
@@ -258,6 +250,7 @@ struct fuse_args {
 		/* Path used for completing d_canonical_path */
 		struct path *canonical_path;
 	} out;
+	struct file *passthrough_filp;
 };
 
 #define FUSE_ARGS(args) struct fuse_args args = {}
@@ -346,6 +339,9 @@ struct fuse_req {
 
 	/** The request output */
 	struct fuse_out out;
+
+    /** Lower filesystem file pointer used in pass-through mode */
+    struct file *passthrough_filp;
 
 	/** Used to wake up the task waiting for completion of request*/
 	wait_queue_head_t waitq;
@@ -664,7 +660,7 @@ struct fuse_conn {
 	/** Allow other than the mounter user to access the filesystem ? */
 	unsigned allow_other:1;
 
-	/** Passthrough mode for read/write IO */
+	/** Pass-through mode for read/write IO */
 	unsigned int passthrough:1;
 
 	/** The number of requests waiting for completion */
@@ -705,12 +701,6 @@ struct fuse_conn {
 
 	/** List of device instances belonging to this connection */
 	struct list_head devices;
-
-	/** IDR for passthrough requests */
-	struct idr passthrough_req;
-
-	/** Protects passthrough_req */
-	spinlock_t passthrough_req_lock;
 };
 
 static inline struct fuse_conn *get_fuse_conn_super(struct super_block *sb)
@@ -1042,13 +1032,9 @@ struct posix_acl;
 struct posix_acl *fuse_get_acl(struct inode *inode, int type);
 int fuse_set_acl(struct inode *inode, struct posix_acl *acl, int type);
 
-/* passthrough.c */
-int fuse_passthrough_open(struct fuse_dev *fud, u32 lower_fd);
-int fuse_passthrough_setup(struct fuse_conn *fc, struct fuse_file *ff,
-			   struct fuse_open_out *openarg);
-void fuse_passthrough_release(struct fuse_passthrough *passthrough);
+void fuse_setup_passthrough(struct fuse_conn *fc, struct fuse_req *req);
 ssize_t fuse_passthrough_read_iter(struct kiocb *iocb, struct iov_iter *to);
 ssize_t fuse_passthrough_write_iter(struct kiocb *iocb, struct iov_iter *from);
-ssize_t fuse_passthrough_mmap(struct file *file, struct vm_area_struct *vma);
+void fuse_passthrough_release(struct fuse_file *ff);
 
 #endif /* _FS_FUSE_I_H */
