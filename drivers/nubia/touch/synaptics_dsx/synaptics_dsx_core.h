@@ -450,7 +450,6 @@ struct synaptics_rmi4_data {
 	struct pinctrl_state *pinctrl_state_release;
 
 #endif
-	struct work_struct resume_work;
 	struct platform_device *pdev;
 	struct input_dev *input_dev;
 	struct input_dev *stylus_dev;
